@@ -18,9 +18,6 @@ It runs a simple HTTP server using which the experiments can be started.
     and scripts (see directory `experiments`),
     so this does not need to be done if no change is needed.
 
-1. Fill the directory `ontologies` with the ontologies on which the experiments should be run.
-    By default there are just some toy ontologies.
-
 1. Invoke the following command in the root directory of the repository:
     ```
     docker build -t pinpointing .
