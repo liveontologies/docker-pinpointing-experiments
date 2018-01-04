@@ -13,15 +13,5 @@ shift
 OUTPUT_DIR=$1
 shift
 
-for QUERY_DIR in $ENCODING_DIR/*
-do
-	LITERAL=`cat $QUERY_DIR/encoding.q`
-	INPUT_FILE=$QUERY_DIR/encoding.$LITERAL.wcnf
-	if [ ! -s $INPUT_FILE ]
-	then
-		$EL2MUS_DIR/scripts/create-wcnf encoding $QUERY_DIR $QUERY_DIR/encoding.q $QUERY_DIR $EL2MUS_DIR/tools/ no-opt
-	fi
-done
-
-$SCRIPTS_DIR/run_EL2MUS_experiments.sh $EL2MUS_DIR/hgmus/hgmus $TIMEOUT $GLOBAL_TIMEOUT $QUERY_FILE $ENCODING_DIR $OUTPUT_DIR
+$SCRIPTS_DIR/run_EL2MUS_experiments.sh $EL2MUS_DIR/hgmus/hgmus_fixed $TIMEOUT $GLOBAL_TIMEOUT $QUERY_FILE $ENCODING_DIR $EL2MUS_DIR/scripts/ $EL2MUS_DIR/tools/ $OUTPUT_DIR
 

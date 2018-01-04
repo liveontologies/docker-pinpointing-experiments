@@ -13,8 +13,7 @@ shift
 OUTPUT_DIR=$1
 shift
 
-PROPS='-Delk.reasoner.tracing.evictor=NQEvictor(25600,0.75,3500000,0.75)'
 SELECTION=BOTTOM_UP
 
-java -Xmx7G -Xms2G $PROPS -jar $PINPOINTING_JAR -t "$TIMEOUT"000 -g "$GLOBAL_TIMEOUT"000 $OUTPUT_DIR/record.csv $QUERY_FILE org.liveontologies.pinpointing.experiments.SatResolutionJustificationExperiment -- $ENCODING_DIR $SELECTION 2>&1 > $OUTPUT_DIR/out.log | tee $OUTPUT_DIR/err.log 1>&2
+java -Xmx7G -Xms2G -jar $PINPOINTING_JAR -t "$TIMEOUT"000 -g "$GLOBAL_TIMEOUT"000 $OUTPUT_DIR/record.csv $QUERY_FILE org.liveontologies.pinpointing.experiments.SatResolutionJustificationExperiment -- $ENCODING_DIR $SELECTION 2>&1 > $OUTPUT_DIR/out.log | tee $OUTPUT_DIR/err.log 1>&2
 
