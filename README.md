@@ -34,7 +34,7 @@ It runs a simple HTTP server using which the experiments can be started.
     This creates and runs the container with the experiments.
     If the host machine does not have the port 80 free,
     you can change the port to, let's say, 8080 by
-    changing the value of the option `-p` to `80:8080`.
+    changing the value of the option `-p` to `8080:80`.
 
 1. Point your browser to the address of the host machine,
     e.g., `http://localhost/`, or if you changed the port `http://localhost:8080/`.
