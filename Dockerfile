@@ -1,6 +1,6 @@
 FROM openjdk:8u151-jdk
 
-ENV PINPOINTING_JAR pinpointing-experiments-0.1.1-SNAPSHOT-c8ebf65-jar-with-dependencies.jar
+ENV PINPOINTING_JAR pinpointing-experiments-0.1.1-SNAPSHOT-7dc5232-jar-with-dependencies.jar
 ENV EL2MCS_DIR el2mcs
 ENV EL2MUS_DIR el2mus
 ENV SATPIN_EXE SATPin
