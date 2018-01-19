@@ -82,7 +82,7 @@
 					<images>
 						<image>
 							<name>liveontologies/pinpointing:${project.version}</name>
-							<alias>pinpointing</alias>
+							<alias>pinpointing-container</alias>
 							<build>
 								<dockerFileDir>pinpointing</dockerFileDir>
 								<assembly>
@@ -90,6 +90,7 @@
 								</assembly>
 							</build>
 							<run>
+								<namingStrategy>alias</namingStrategy>
 								<ports>
 									<port>8888:80</port>
 								</ports>
