@@ -115,8 +115,9 @@ do
 	
 	NAME=`basename -s ".owl" $ONTOLOGY`
 	echo `date "$TIME_LOG_FORMAT"` "generating queries for $NAME"
-	java -Xmx7G -Xms2G -cp "$CLASSPATH" org.liveontologies.pinpointing.ExtractSubsumptions $QUERY_GENERATION_OPTIONS --sort $ONTOLOGY $QUERIES_DIR/$NAME.queries.sorted 2>&1 > $QUERIES_DIR/$NAME.out.log | tee $QUERIES_DIR/$NAME.err.log 1>&2
-	java -Xmx7G -Xms2G -cp "$CLASSPATH" org.liveontologies.pinpointing.Shuffler 1 < $QUERIES_DIR/$NAME.queries.sorted > $QUERIES_DIR/$NAME.queries.seed1
+	java $JAVA_MEMORY_OPTIONS -cp "$CLASSPATH" org.liveontologies.pinpointing.ExtractSubsumptions $QUERY_GENERATION_OPTIONS --sort $ONTOLOGY $QUERIES_DIR/$NAME.queries.sorted 2>&1 > $QUERIES_DIR/$NAME.sorted.out.log | tee $QUERIES_DIR/$NAME.sorted.err.log 1>&2
+	java $JAVA_MEMORY_OPTIONS -cp "$CLASSPATH" org.liveontologies.pinpointing.Shuffler 1 < $QUERIES_DIR/$NAME.queries.sorted > $QUERIES_DIR/$NAME.queries.seed1
+	java $JAVA_MEMORY_OPTIONS -cp "$CLASSPATH" org.liveontologies.pinpointing.ExtractSubsumptions $QUERY_GENERATION_OPTIONS --traversal BOTTOM_UP --collection SUB_TO_SUPER $ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up 2>&1 > $QUERIES_DIR/$NAME.bottom_up.out.log | tee $QUERIES_DIR/$NAME.bottom_up.err.log 1>&2
 done
 
 
@@ -134,8 +135,8 @@ do
 	
 	NAME=`basename -s ".owl" $ONTOLOGY`
 	echo `date "$TIME_LOG_FORMAT"` "encoding $NAME"
-	PROPS='-Delk.reasoner.tracing.evictor=RecencyEvictor(16896,0.75)'
-	java -Xmx7G -Xms2G $PROPS -cp "$CLASSPATH" org.liveontologies.pinpointing.DirectSatEncodingUsingElkCsvQuery $ONTOLOGY $QUERIES_DIR/$NAME.queries.sorted $ENCODING_DIR/$NAME.elk_sat 2>&1 > $ENCODING_DIR/$NAME.out.log | tee $ENCODING_DIR/$NAME.err.log 1>&2
+	PROPS='-Delk.reasoner.tracing.evictor=RecencyEvictor(1000000,0.75)'
+	java $JAVA_MEMORY_OPTIONS $PROPS -cp "$CLASSPATH" org.liveontologies.pinpointing.DirectSatEncodingUsingElkCsvQuery $ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up $ENCODING_DIR/$NAME.elk_sat 2>&1 > $ENCODING_DIR/$NAME.out.log | tee $ENCODING_DIR/$NAME.err.log 1>&2
 	
 done
 

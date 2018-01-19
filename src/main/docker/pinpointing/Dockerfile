@@ -5,6 +5,8 @@ ENV EL2MCS_DIR el2mcs
 ENV EL2MUS_DIR el2mus
 ENV SATPIN_EXE SATPin
 
+ENV JAVA_MEMORY_OPTIONS '-Xmx6G -Xms2G'
+
 WORKDIR /home/pinpointing
 
 COPY . /home/pinpointing
