@@ -16,8 +16,8 @@ It runs a simple HTTP server using which the experiments can be started.
 
 # Prerequisites: 
 
-- docker for running the experiments container
-- java 8+, maven 3+ for compiling the docker image
+- [docker](https://www.docker.com) for running the experiments container
+- [java v.8+](http://java.com) and [maven v.3+](https://maven.apache.org/) for compiling the docker image
 
 # How to build
 
