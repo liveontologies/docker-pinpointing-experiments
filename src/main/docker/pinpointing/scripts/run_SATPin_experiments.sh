@@ -15,10 +15,12 @@ echo "query,didTimeOut,time,realTime,cpuTime,nJust" > $OUTPUT_DIR/record.csv
 G_START_NANO=`date +%s%N`
 TOTAL_TIME_NANOS=0
 
-cat $QUERY_FILE | sed "s/[^a-zA-Z0-9_.-]/_/g" | while read LINE
+cat $QUERY_FILE | while read LINE
 do
 	
-	QUERY_DIR=$ENCODING_DIR/$LINE
+	QUERY_SHA1=`perl -e "print qq($LINE)" | sha1sum | cut -d" " -f1`
+	
+	QUERY_DIR=$ENCODING_DIR/$QUERY_SHA1
 	if [ ! -s $QUERY_DIR ]
 	then
 		>&2 echo "No Input Dir: " $QUERY_DIR
@@ -27,7 +29,7 @@ do
 	
 	echo -n '"'`cat $QUERY_DIR/encoding.query`'"', >> $OUTPUT_DIR/record.csv
 	
-	LOG_DIR=$OUTPUT_DIR/$LINE
+	LOG_DIR=$OUTPUT_DIR/$QUERY_SHA1
 	mkdir -p $LOG_DIR
 	
 	START_NANO=`date +%s%N`
