@@ -73,7 +73,7 @@ then
 	
 	echo `date "$TIME_LOG_FORMAT"` "extracting the input ontologies"
 	
-	ABSPLUTE_ONTOLOGIES_ARCHIVE=`realpath $INPUT_FILE`
+	ABSPLUTE_ONTOLOGIES_ARCHIVE="$(cd "$(dirname "$INPUT_FILE")" && pwd)/$(basename "$INPUT_FILE")"
 	CURRENT_DIR=`pwd`
 	cd $ONTOLOGIES_DIR
 	
