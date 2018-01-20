@@ -19,5 +19,5 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 EXPOSE 80
 
 # Must be in the shell form so that the variable substitution works
-CMD java -cp 'maven/*' org.liveontologies.pinpointing.ExperimentServer --workspace workspace \
+CMD java -cp 'maven/*' org.liveontologies.pinpointing.ExperimentServer --exps available_experiments --workspace workspace \
 	./scripts/run_ELK-SAT_experiments.sh '<t>' '<g>' '<s>' '<o>' docker scripts workspace '<q>'

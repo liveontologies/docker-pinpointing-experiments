@@ -110,14 +110,14 @@ then
 fi
 mkdir -p $QUERIES_DIR
 
-for ONTOLOGY in $ONTOLOGIES_DIR/*
+for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR`
 do
 	
 	NAME=`basename -s ".owl" $ONTOLOGY`
 	echo `date "$TIME_LOG_FORMAT"` "generating queries for $NAME"
-	java $JAVA_MEMORY_OPTIONS -cp "$CLASSPATH" org.liveontologies.pinpointing.ExtractSubsumptions $QUERY_GENERATION_OPTIONS --sort $ONTOLOGY $QUERIES_DIR/$NAME.queries.sorted 2>&1 > $QUERIES_DIR/$NAME.sorted.out.log | tee $QUERIES_DIR/$NAME.sorted.err.log 1>&2
+	java $JAVA_MEMORY_OPTIONS -cp "$CLASSPATH" org.liveontologies.pinpointing.ExtractSubsumptions $QUERY_GENERATION_OPTIONS --sort $ONTOLOGIES_DIR/$ONTOLOGY $QUERIES_DIR/$NAME.queries.sorted 2>&1 > $QUERIES_DIR/$NAME.sorted.out.log | tee $QUERIES_DIR/$NAME.sorted.err.log 1>&2
 	java $JAVA_MEMORY_OPTIONS -cp "$CLASSPATH" org.liveontologies.pinpointing.Shuffler 1 < $QUERIES_DIR/$NAME.queries.sorted > $QUERIES_DIR/$NAME.queries.seed1
-	java $JAVA_MEMORY_OPTIONS -cp "$CLASSPATH" org.liveontologies.pinpointing.ExtractSubsumptions $QUERY_GENERATION_OPTIONS --traversal BOTTOM_UP --collection SUB_TO_SUPER $ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up 2>&1 > $QUERIES_DIR/$NAME.bottom_up.out.log | tee $QUERIES_DIR/$NAME.bottom_up.err.log 1>&2
+	java $JAVA_MEMORY_OPTIONS -cp "$CLASSPATH" org.liveontologies.pinpointing.ExtractSubsumptions $QUERY_GENERATION_OPTIONS --traversal BOTTOM_UP --collection SUB_TO_SUPER $ONTOLOGIES_DIR/$ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up 2>&1 > $QUERIES_DIR/$NAME.bottom_up.out.log | tee $QUERIES_DIR/$NAME.bottom_up.err.log 1>&2
 done
 
 
@@ -130,13 +130,13 @@ then
 fi
 mkdir -p $ENCODING_DIR
 
-for ONTOLOGY in $ONTOLOGIES_DIR/*
+for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR`
 do
 	
 	NAME=`basename -s ".owl" $ONTOLOGY`
 	echo `date "$TIME_LOG_FORMAT"` "encoding $NAME"
 	PROPS='-Delk.reasoner.tracing.evictor=RecencyEvictor(1000000,0.75)'
-	java $JAVA_MEMORY_OPTIONS $PROPS -cp "$CLASSPATH" org.liveontologies.pinpointing.DirectSatEncodingUsingElkCsvQuery $ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up $ENCODING_DIR/$NAME.elk_sat --minimal 2>&1 > $ENCODING_DIR/$NAME.out.log | tee $ENCODING_DIR/$NAME.err.log 1>&2
+	java $JAVA_MEMORY_OPTIONS $PROPS -cp "$CLASSPATH" org.liveontologies.pinpointing.DirectSatEncodingUsingElkCsvQuery $ONTOLOGIES_DIR/$ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up $ENCODING_DIR/$NAME.elk_sat --minimal 2>&1 > $ENCODING_DIR/$NAME.out.log | tee $ENCODING_DIR/$NAME.err.log 1>&2
 	
 done
 
@@ -147,13 +147,13 @@ done
 rm -rf $RESULTS_DIR
 mkdir -p $RESULTS_DIR
 
-for EXPERIMENT in $EXPERIMENT_DIR/*
+for EXPERIMENT in `ls -1 $EXPERIMENT_DIR`
 do
 	
 	EXPERIMENT_NAME=`basename -s ".sh" $EXPERIMENT`
 	echo `date "$TIME_LOG_FORMAT"` "running experiment $EXPERIMENT_NAME ..."
 	
-	for ONTOLOGY in $ONTOLOGIES_DIR/*
+	for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR/`
 	do
 	
 		NAME=`basename -s ".owl" $ONTOLOGY`
@@ -161,7 +161,7 @@ do
 		DIR_NAME=$DATE.$NAME.$EXPERIMENT_NAME.$MACHINE_NAME.elk_sat
 		rm -rf $LOGS_DIR/$DIR_NAME
 		mkdir -p $LOGS_DIR/$DIR_NAME
-		./$EXPERIMENT $TIMEOUT $GLOBAL_TIMEOUT $QUERIES_DIR/$NAME.queries.seed1 $ENCODING_DIR/$NAME.elk_sat $SCRIPTS_DIR $LOGS_DIR/$DIR_NAME
+		./$EXPERIMENT_DIR/$EXPERIMENT $TIMEOUT $GLOBAL_TIMEOUT $QUERIES_DIR/$NAME.queries.seed1 $ENCODING_DIR/$NAME.elk_sat $SCRIPTS_DIR $LOGS_DIR/$DIR_NAME
 		cp $LOGS_DIR/$DIR_NAME/record.csv $RESULTS_DIR/$DIR_NAME.csv
 	
 	done
@@ -178,14 +178,14 @@ echo "" > $PLOT_FILE
 
 PLOT_LEGEND=""
 PLOT_ARGS=""
-for EXPERIMENT in $EXPERIMENT_DIR/*
+for EXPERIMENT in `ls -1 $EXPERIMENT_DIR`
 do
 	
 	EXPERIMENT_NAME=`basename -s ".sh" $EXPERIMENT`
 	PLOT_ARGS="$PLOT_ARGS $EXPERIMENT_NAME"
 	
 	PLOT_LEGEND=""
-	for ONTOLOGY in $ONTOLOGIES_DIR/*
+	for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR`
 	do
 
 		NAME=`basename -s ".owl" $ONTOLOGY`

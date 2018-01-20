@@ -35,7 +35,9 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -48,6 +50,7 @@ import fi.iki.elonen.NanoHTTPD;
 import fi.iki.elonen.NanoHTTPD.Response.Status;
 import net.sourceforge.argparse4j.ArgumentParsers;
 import net.sourceforge.argparse4j.annotation.Arg;
+import net.sourceforge.argparse4j.impl.Arguments;
 import net.sourceforge.argparse4j.inf.ArgumentParser;
 import net.sourceforge.argparse4j.inf.ArgumentParserException;
 
@@ -57,6 +60,7 @@ public class ExperimentServer extends NanoHTTPD {
 			.getLogger(ExperimentServer.class);
 
 	public static final String OPT_PORT = "port";
+	public static final String OPT_EXPERIMENTS = "exps";
 	public static final String OPT_WORKSPACE = "workspace";
 	public static final String OPT_COMMAND = "command";
 
@@ -65,6 +69,8 @@ public class ExperimentServer extends NanoHTTPD {
 	public static class Options {
 		@Arg(dest = OPT_PORT)
 		public Integer port;
+		@Arg(dest = OPT_EXPERIMENTS)
+		public File experiments;
 		@Arg(dest = OPT_WORKSPACE)
 		public File workspace;
 		@Arg(dest = OPT_COMMAND)
@@ -81,6 +87,10 @@ public class ExperimentServer extends NanoHTTPD {
 				.setDefault(DEFAULT_PORT)
 				.help("the port on which the server listens (default: "
 						+ DEFAULT_PORT + ")");
+		parser.addArgument("--" + OPT_EXPERIMENTS)
+				.type(Arguments.fileType().verifyExists().verifyIsDirectory())
+				.required(true)
+				.help("the directory that contains available experiments");
 		parser.addArgument("--" + OPT_WORKSPACE).type(File.class).required(true)
 				.help("the directory in which the experiment manipulates files");
 		parser.addArgument(OPT_COMMAND).nargs("+").help(
@@ -97,7 +107,8 @@ public class ExperimentServer extends NanoHTTPD {
 			LOGGER_.info("Binding server to port {}", opt.port);
 			LOGGER_.info("workspace={}", opt.workspace);
 			LOGGER_.info("command={}", Arrays.toString(opt.command));
-			new ExperimentServer(opt.port, opt.workspace, opt.command);
+			new ExperimentServer(opt.port, opt.experiments, opt.workspace,
+					opt.command);
 
 		} catch (final IOException e) {
 			LOGGER_.error("Cannot start server!", e);
@@ -109,17 +120,20 @@ public class ExperimentServer extends NanoHTTPD {
 	}
 
 	private static final String WS_INPUT_ = "input";
+	private static final String WS_EXPS_ = "experiments";
 	private static final String WS_RESULTS_ = "results";
 	private static final String WS_RESULTS_ARCHIVE_ = "results.zip";
 	private static final String WS_PLOT_ = "plot.svg";
 
-	public ExperimentServer(final int port, final File workspace,
-			final String... command) throws IOException {
+	public ExperimentServer(final int port, final File availableExpsDir,
+			final File workspace, final String... command) throws IOException {
 		super(port);
+		this.availableExpsDir_ = availableExpsDir;
 		this.workspace_ = workspace;
 		Utils.cleanIfNotDir(this.workspace_);
 		this.inputDir_ = new File(workspace, WS_INPUT_);
 		Utils.cleanIfNotDir(this.inputDir_);
+		this.expsDir_ = new File(workspace, WS_EXPS_);
 		this.resultsDir_ = new File(workspace, WS_RESULTS_);
 		this.resultsFile_ = new File(workspace, WS_RESULTS_ARCHIVE_);
 		this.plotFile_ = new File(workspace, WS_PLOT_);
@@ -128,8 +142,10 @@ public class ExperimentServer extends NanoHTTPD {
 		LOGGER_.info("Server running ;-)");
 	}
 
+	private final File availableExpsDir_;
 	private final File workspace_;
 	private final File inputDir_;
+	private final File expsDir_;
 	private final File plotFile_;
 	private final File resultsDir_;
 	private final File resultsFile_;
@@ -176,6 +192,9 @@ public class ExperimentServer extends NanoHTTPD {
 			+ "    <input type='radio' name='" + FIELD_SOURCE_ + "' value='" + FIELD_SOURCE_WEB_ + "'\n"
 			+ "      onclick=\"document.getElementById('onto_input').innerHTML = '<input type=\\'text\\' name=\\'" + FIELD_ONTOLOGIES_ + "\\' required>'\"> Download from web\n"
 			+ "    <span id='onto_input'><input type='file' name='" + FIELD_ONTOLOGIES_ + "' accept='.tar.gz,.tgz,.zip,.owl' required><span></p>\n"
+			+ "    <p>Which tools should be used for the experiments:\n"
+			+ "%s"// tools fields
+			+ "    </p>\n"
 			+ "    <p>Options for query generation<br/>\n"
 			+ "    (for which subsumptions should the justification be computed)<br/>\n"
 			+ "    <input type='checkbox' name='" + FIELD_DIRECT_ + "' checked value='" + FIELD_DIRECT_ + "'>\n"
@@ -337,6 +356,7 @@ public class ExperimentServer extends NanoHTTPD {
 		final String sourceValue;
 		final String ontologies;
 		final String queryGenerationOptions;
+		final Set<String> selectedTools = new HashSet<>();
 		try {
 
 			final Map<String, String> files = new HashMap<String, String>();
@@ -449,6 +469,13 @@ public class ExperimentServer extends NanoHTTPD {
 					!params.containsKey(FIELD_TAUT_),
 					params.containsKey(FIELD_NOBOTTOM_));
 
+			for (final File expFile : availableExpsDir_.listFiles()) {
+				if (params.containsKey(expFile.getName())) {
+					selectedTools.add(expFile.getName());
+				}
+			}
+			LOGGER_.info("selectedTools: {}", selectedTools);
+
 		} catch (final IOException | ResponseException e) {
 			return newErrorResponse("Cannot parse the request!", e);
 		}
@@ -477,6 +504,14 @@ public class ExperimentServer extends NanoHTTPD {
 						}
 					}
 					// else
+					Utils.cleanDir(expsDir_);
+					for (final String expFileName : selectedTools) {
+						final File source = new File(availableExpsDir_,
+								expFileName);
+						final File target = new File(expsDir_, expFileName);
+						Files.copy(source.toPath(), target.toPath(),
+								StandardCopyOption.REPLACE_EXISTING);
+					}
 					experimentLog_.setLength(0);
 					experimentProcess_ = new ProcessBuilder(substituteCommand(
 							command_, timeout, globalTimeout, sourceValue,
@@ -493,11 +528,27 @@ public class ExperimentServer extends NanoHTTPD {
 				return newErrorResponse("Cannot start the experiment!", e);
 			}
 		} else {
+			// compose tools fields
+			final StringBuilder tools = new StringBuilder();
+			for (final File expFile : availableExpsDir_.listFiles()) {
+				tools.append("<br/><input type='checkbox' name='");
+				tools.append(expFile.getName());
+				tools.append("'");
+				tools.append(" checked");
+				tools.append(" value='");
+				tools.append(expFile.getName());
+				tools.append("'><label for='");
+				tools.append(expFile.getName());
+				tools.append("'>");
+				tools.append(Utils.dropExtension(expFile.getName()));
+				tools.append("</label>\n");
+			}
 			return newFixedLengthResponse(String.format(TEMPLATE_INDEX_,
 					validationMessages.get(FIELD_TIMEOUT_), timeoutValue,
 					validationMessages.get(FIELD_GLOBAL_TIMEOUT_),
 					globalTimeoutValue,
-					validationMessages.get(FIELD_ONTOLOGIES_)));
+					validationMessages.get(FIELD_ONTOLOGIES_),
+					tools.toString()));
 		}
 
 	}
