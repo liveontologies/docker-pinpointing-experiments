@@ -37,7 +37,7 @@ do
 		break
 	fi
 	
-	echo -n '"'`cat $QUERY_DIR/encoding.query`'"', >> $OUTPUT_DIR/record.csv
+	echo -n '"'$LINE'"', >> $OUTPUT_DIR/record.csv
 	
 	LITERAL=`cat $QUERY_DIR/encoding.q`
 	INPUT_FILE=$QUERY_DIR/encoding.$LITERAL.wcnf

@@ -27,7 +27,7 @@ do
 		break
 	fi
 	
-	echo -n '"'`cat $QUERY_DIR/encoding.query`'"', >> $OUTPUT_DIR/record.csv
+	echo -n '"'$LINE'"', >> $OUTPUT_DIR/record.csv
 	
 	LOG_DIR=$OUTPUT_DIR/$QUERY_SHA1
 	mkdir -p $LOG_DIR

@@ -136,7 +136,7 @@ do
 	NAME=`basename -s ".owl" $ONTOLOGY`
 	echo `date "$TIME_LOG_FORMAT"` "encoding $NAME"
 	PROPS='-Delk.reasoner.tracing.evictor=RecencyEvictor(1000000,0.75)'
-	java $JAVA_MEMORY_OPTIONS $PROPS -cp "$CLASSPATH" org.liveontologies.pinpointing.DirectSatEncodingUsingElkCsvQuery $ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up $ENCODING_DIR/$NAME.elk_sat 2>&1 > $ENCODING_DIR/$NAME.out.log | tee $ENCODING_DIR/$NAME.err.log 1>&2
+	java $JAVA_MEMORY_OPTIONS $PROPS -cp "$CLASSPATH" org.liveontologies.pinpointing.DirectSatEncodingUsingElkCsvQuery $ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up $ENCODING_DIR/$NAME.elk_sat --minimal 2>&1 > $ENCODING_DIR/$NAME.out.log | tee $ENCODING_DIR/$NAME.err.log 1>&2
 	
 done
 
