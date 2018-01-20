@@ -20,11 +20,11 @@ shift
 INPUT_DIR=$WORKSPACE_DIR/input
 ONTOLOGIES_DIR=$WORKSPACE_DIR/ontologies
 QUERIES_DIR=$WORKSPACE_DIR/queries
-ENCODING_DIR=$WORKSPACE_DIR/elk_sat
+INFS_DIR=$WORKSPACE_DIR/inferences
 EXPERIMENT_DIR=$WORKSPACE_DIR/experiments
 LOGS_DIR=$WORKSPACE_DIR/logs
 RESULTS_DIR=$WORKSPACE_DIR/results
-PLOT_FILE=$WORKSPACE_DIR/plot.svg
+PLOTS_DIR=$RESULTS_DIR/plots
 RESULTS_ARCHIVE=$WORKSPACE_DIR/results.zip
 
 
@@ -124,19 +124,25 @@ done
 
 # Encode ELK inferences to SAT
 
-if [ -e $ENCODING_DIR ] && [ ! -d $ENCODING_DIR ]
+if [ -e $INFS_DIR ] && [ ! -d $INFS_DIR ]
 then
-	rm -rf $ENCODING_DIR
+	rm -rf $INFS_DIR
 fi
-mkdir -p $ENCODING_DIR
+mkdir -p $INFS_DIR
+
+if [ -e $INFS_DIR/elk ] && [ ! -d $INFS_DIR/elk ]
+then
+	rm -rf $INFS_DIR/elk
+fi
+mkdir -p $INFS_DIR/elk
 
 for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR`
 do
 	
 	NAME=`basename -s ".owl" $ONTOLOGY`
-	echo `date "$TIME_LOG_FORMAT"` "encoding $NAME"
+	echo `date "$TIME_LOG_FORMAT"` "tracing elk inferences for $NAME"
 	PROPS='-Delk.reasoner.tracing.evictor=RecencyEvictor(1000000,0.75)'
-	java $JAVA_MEMORY_OPTIONS $PROPS -cp "$CLASSPATH" org.liveontologies.pinpointing.DirectSatEncodingUsingElkCsvQuery $ONTOLOGIES_DIR/$ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up $ENCODING_DIR/$NAME.elk_sat --minimal 2>&1 > $ENCODING_DIR/$NAME.out.log | tee $ENCODING_DIR/$NAME.err.log 1>&2
+	java $JAVA_MEMORY_OPTIONS $PROPS -cp "$CLASSPATH" org.liveontologies.pinpointing.DirectSatEncodingUsingElkCsvQuery $ONTOLOGIES_DIR/$ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up $INFS_DIR/elk/$NAME --minimal 2>&1 > $INFS_DIR/elk/$NAME.out.log | tee $INFS_DIR/elk/$NAME.err.log 1>&2
 	
 done
 
@@ -147,23 +153,30 @@ done
 rm -rf $RESULTS_DIR
 mkdir -p $RESULTS_DIR
 
-for EXPERIMENT in `ls -1 $EXPERIMENT_DIR`
+for INF_TYPE in `ls -1 $INFS_DIR`
 do
 	
-	EXPERIMENT_NAME=`basename -s ".sh" $EXPERIMENT`
-	echo `date "$TIME_LOG_FORMAT"` "running experiment $EXPERIMENT_NAME ..."
+	echo `date "$TIME_LOG_FORMAT"` "running experiments on $INF_TYPE inferences"
 	
-	for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR/`
+	for EXPERIMENT in `ls -1 $EXPERIMENT_DIR`
 	do
-	
-		NAME=`basename -s ".owl" $ONTOLOGY`
-		echo `date "$TIME_LOG_FORMAT"` "... on $NAME"
-		DIR_NAME=$DATE.$NAME.$EXPERIMENT_NAME.$MACHINE_NAME.elk_sat
-		rm -rf $LOGS_DIR/$DIR_NAME
-		mkdir -p $LOGS_DIR/$DIR_NAME
-		./$EXPERIMENT_DIR/$EXPERIMENT $TIMEOUT $GLOBAL_TIMEOUT $QUERIES_DIR/$NAME.queries.seed1 $ENCODING_DIR/$NAME.elk_sat $SCRIPTS_DIR $LOGS_DIR/$DIR_NAME
-		cp $LOGS_DIR/$DIR_NAME/record.csv $RESULTS_DIR/$DIR_NAME.csv
-	
+		
+		EXPERIMENT_NAME=`basename -s ".sh" $EXPERIMENT`
+		echo `date "$TIME_LOG_FORMAT"` "running experiment $EXPERIMENT_NAME ..."
+		
+		for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR/`
+		do
+			
+			NAME=`basename -s ".owl" $ONTOLOGY`
+			echo `date "$TIME_LOG_FORMAT"` "... on $NAME"
+			DIR_NAME=$DATE.$NAME.$EXPERIMENT_NAME.$MACHINE_NAME.$INF_TYPE
+			rm -rf $LOGS_DIR/$DIR_NAME
+			mkdir -p $LOGS_DIR/$DIR_NAME
+			./$EXPERIMENT_DIR/$EXPERIMENT $TIMEOUT $GLOBAL_TIMEOUT $QUERIES_DIR/$NAME.queries.seed1 $INFS_DIR/$INF_TYPE/$NAME $SCRIPTS_DIR $LOGS_DIR/$DIR_NAME
+			cp $LOGS_DIR/$DIR_NAME/record.csv $RESULTS_DIR/$DIR_NAME.csv
+			
+		done
+		
 	done
 	
 done
@@ -174,35 +187,38 @@ done
 
 echo `date "$TIME_LOG_FORMAT"` "plotting"
 
-echo "" > $PLOT_FILE
+mkdir -p $PLOTS_DIR
 
-PLOT_LEGEND=""
-PLOT_ARGS=""
-for EXPERIMENT in `ls -1 $EXPERIMENT_DIR`
+for INF_TYPE in `ls -1 $INFS_DIR`
 do
 	
-	EXPERIMENT_NAME=`basename -s ".sh" $EXPERIMENT`
-	PLOT_ARGS="$PLOT_ARGS $EXPERIMENT_NAME"
-	
 	PLOT_LEGEND=""
-	for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR`
+	PLOT_ARGS=""
+	for EXPERIMENT in `ls -1 $EXPERIMENT_DIR`
 	do
-
-		NAME=`basename -s ".owl" $ONTOLOGY`
-		PLOT_LEGEND="$PLOT_LEGEND $NAME"
-	
-		DIR_NAME=$DATE.$NAME.$EXPERIMENT_NAME.$MACHINE_NAME.elk_sat
-		RECORD=$LOGS_DIR/$DIR_NAME/record.csv
 		
-		PLOT_ARGS="$PLOT_ARGS $RECORD"
-	
+		EXPERIMENT_NAME=`basename -s ".sh" $EXPERIMENT`
+		PLOT_ARGS="$PLOT_ARGS $EXPERIMENT_NAME"
+		
+		PLOT_LEGEND=""
+		for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR`
+		do
+			
+			NAME=`basename -s ".owl" $ONTOLOGY`
+			PLOT_LEGEND="$PLOT_LEGEND $NAME"
+			
+			DIR_NAME=$DATE.$NAME.$EXPERIMENT_NAME.$MACHINE_NAME.$INF_TYPE
+			RECORD=$LOGS_DIR/$DIR_NAME/record.csv
+			
+			PLOT_ARGS="$PLOT_ARGS $RECORD"
+			
+		done
+		
 	done
 	
+	./$SCRIPTS_DIR/plot_row.r $PLOTS_DIR/plot.$INF_TYPE.svg $PLOT_LEGEND -- $PLOT_ARGS >/dev/null 2>/dev/null
+	
 done
-
-./$SCRIPTS_DIR/plot_row.r $PLOT_FILE $PLOT_LEGEND -- $PLOT_ARGS >/dev/null 2>/dev/null
-
-cp $PLOT_FILE $RESULTS_DIR
 
 
 

@@ -27,6 +27,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -122,8 +123,8 @@ public class ExperimentServer extends NanoHTTPD {
 	private static final String WS_INPUT_ = "input";
 	private static final String WS_EXPS_ = "experiments";
 	private static final String WS_RESULTS_ = "results";
+	private static final String WS_PLOTS_ = "plots";
 	private static final String WS_RESULTS_ARCHIVE_ = "results.zip";
-	private static final String WS_PLOT_ = "plot.svg";
 
 	public ExperimentServer(final int port, final File availableExpsDir,
 			final File workspace, final String... command) throws IOException {
@@ -135,8 +136,8 @@ public class ExperimentServer extends NanoHTTPD {
 		Utils.cleanIfNotDir(this.inputDir_);
 		this.expsDir_ = new File(workspace, WS_EXPS_);
 		this.resultsDir_ = new File(workspace, WS_RESULTS_);
+		this.plotsDir_ = new File(resultsDir_, WS_PLOTS_);
 		this.resultsFile_ = new File(workspace, WS_RESULTS_ARCHIVE_);
-		this.plotFile_ = new File(workspace, WS_PLOT_);
 		this.command_ = command;
 		start(NanoHTTPD.SOCKET_READ_TIMEOUT, false);
 		LOGGER_.info("Server running ;-)");
@@ -146,8 +147,8 @@ public class ExperimentServer extends NanoHTTPD {
 	private final File workspace_;
 	private final File inputDir_;
 	private final File expsDir_;
-	private final File plotFile_;
 	private final File resultsDir_;
+	private final File plotsDir_;
 	private final File resultsFile_;
 	private final String[] command_;
 
@@ -590,24 +591,35 @@ public class ExperimentServer extends NanoHTTPD {
 		}
 		// else
 
-		// Paste the SVG plot into the template.
+		// Paste the SVG plots into the template.
 		final StringBuilder plotString = new StringBuilder("<p>");
-		BufferedReader in = null;
-		try {
-			in = new BufferedReader(new FileReader(plotFile_));
-			String line = in.readLine();// skip the first line
-			while ((line = in.readLine()) != null) {
-				plotString.append(line);
+		for (final File plotFile : plotsDir_.listFiles()) {
+			plotString.append("<h3>");
+			plotString.append(plotFile.getName());
+			plotString.append("</h3>\n");
+			BufferedReader in = null;
+			try {
+				in = new BufferedReader(new FileReader(plotFile));
+				String line = in.readLine();// skip the first line
+				while ((line = in.readLine()) != null) {
+					plotString.append(line);
+				}
+			} catch (IOException e) {
+				return newErrorResponse("Cannot read the plot!", e);
+			} finally {
+				Utils.closeQuietly(in);
 			}
-		} catch (IOException e) {
-			return newErrorResponse("Cannot read the plot!", e);
-		} finally {
-			Utils.closeQuietly(in);
+			plotString.append("\n");
 		}
 		plotString.append("</p>");
 
 		final StringBuilder resultList = new StringBuilder("<ul>\n");
-		final String[] fileNames = resultsDir_.list();
+		final String[] fileNames = resultsDir_.list(new FilenameFilter() {
+			@Override
+			public boolean accept(final File dir, final String name) {
+				return name.endsWith(".csv");
+			}
+		});
 		Arrays.sort(fileNames);
 		for (final String fileName : fileNames) {
 			resultList.append("<li><a href='/results/");
