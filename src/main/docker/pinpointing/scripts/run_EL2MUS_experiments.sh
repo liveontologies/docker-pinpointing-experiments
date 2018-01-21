@@ -22,8 +22,26 @@ mkdir -p $OUTPUT_DIR
 
 echo "query,didTimeOut,time,realTime,cpuTime,nJust" > $OUTPUT_DIR/record.csv
 
-G_START_NANO=`date +%s%N`
+START_TIME_NANOS=`date +%s%N`
 TOTAL_TIME_NANOS=0
+
+REPORT_INTERVAL_NANOS=1000000000
+TOTAL_QUERIES=`wc -l $QUERY_FILE | cut -d" " -f1`
+DONE_QUERIES=0
+
+function report_progress {
+	CURRENT_NANOS=`date +%s%N`
+	PERCENT=`echo "scale=2; 100*$DONE_QUERIES/$TOTAL_QUERIES" | bc`
+	ELAPSED_NANOS=$(($CURRENT_NANOS - $START_TIME_NANOS))
+	ELAPSED_SECONDS=$(($ELAPSED_NANOS / 1000000000))
+	ETA_NANOS=`echo "scale=9; $ELAPSED_NANOS * ($TOTAL_QUERIES - $DONE_QUERIES) / $DONE_QUERIES" | bc`
+	ETA_SECONDS=`echo "scale=0; $ETA_NANOS / 1000000000" | bc`
+	printf "\r%*d/%d %6.2f%%  elapsed: %02d:%02d:%02d  ETA: %02d:%02d:%02d" ${#TOTAL_QUERIES} $DONE_QUERIES $TOTAL_QUERIES $PERCENT "$((ELAPSED_SECONDS/3600%24))" "$((ELAPSED_SECONDS/60%60))" "$((ELAPSED_SECONDS%60))" "$((ETA_SECONDS/3600%24))" "$((ETA_SECONDS/60%60))" "$((ETA_SECONDS%60))"
+	NEXT_REPORT_AFTER_NANOS=$((`date +%s%N` + $REPORT_INTERVAL_NANOS))
+}
+
+printf "%*d/%d %6.2f%%  elapsed: 00:00:00" ${#TOTAL_QUERIES} $DONE_QUERIES $TOTAL_QUERIES 0.0
+NEXT_REPORT_AFTER_NANOS=$((`date +%s%N` + $REPORT_INTERVAL_NANOS))
 
 cat $QUERY_FILE | while read LINE
 do
@@ -79,10 +97,23 @@ do
 	TOTAL_TIME_NANOS=$(( $TOTAL_TIME_NANOS + $RUN_TIME_NANOS ))
 	if [ $(( $GLOBAL_TIMEOUT * 1000000000 )) -lt $TOTAL_TIME_NANOS ]
 	then
-		>&2 echo "Global Timeout"
 		break
 	fi
 	
+	DONE_QUERIES=$(($DONE_QUERIES + 1))
+	
+	CURRENT_NANOS=`date +%s%N`
+	if (($CURRENT_NANOS >= $NEXT_REPORT_AFTER_NANOS))
+	then
+		report_progress
+	fi
+	
 done
+
+# changes to DONE_QUERIES are not visible outside of the loop
+DONE_QUERIES=`wc -l $OUTPUT_DIR/record.csv | cut -d" " -f1`
+DONE_QUERIES=$(($DONE_QUERIES - 1))
+report_progress
+echo ""
 
 
