@@ -1,5 +1,3 @@
-package org.liveontologies.pinpointing;
-
 /*-
  * #%L
  * Docker Image for Axiom Pinpointing Experiments
@@ -21,6 +19,7 @@ package org.liveontologies.pinpointing;
  * limitations under the License.
  * #L%
  */
+package org.liveontologies.pinpointing;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -156,6 +155,8 @@ public class ExperimentServer extends NanoHTTPD {
 	private Process experimentProcess_ = null;
 	@GuardedBy("this")
 	private StringBuilder experimentLog_ = new StringBuilder();
+	@GuardedBy("this")
+	private StringBuilder experimentLogLastLine_ = new StringBuilder();
 
 	private static final String FIELD_TIMEOUT_ = "timeout";
 	private static final String FIELD_GLOBAL_TIMEOUT_ = "global_timeout";
@@ -514,6 +515,7 @@ public class ExperimentServer extends NanoHTTPD {
 								StandardCopyOption.REPLACE_EXISTING);
 					}
 					experimentLog_.setLength(0);
+					experimentLogLastLine_.setLength(0);
 					experimentProcess_ = new ProcessBuilder(substituteCommand(
 							command_, timeout, globalTimeout, sourceValue,
 							ontologies, queryGenerationOptions))
@@ -580,7 +582,7 @@ public class ExperimentServer extends NanoHTTPD {
 	private synchronized Response doneView(final IHTTPSession session) {
 		LOGGER_.info("done view");
 		return newFixedLengthResponse(
-				String.format(TEMPLATE_DONE_, experimentLog_.toString()));
+				String.format(TEMPLATE_DONE_, experimentLogToString()));
 	}
 
 	private synchronized Response resultsView(final IHTTPSession session) {
@@ -685,8 +687,7 @@ public class ExperimentServer extends NanoHTTPD {
 				updateExperimentLog();
 
 				// encode to text/event-stream
-				final String[] lines = experimentLog_.toString().split("\n",
-						-1);
+				final String[] lines = experimentLogToString().split("\n", -1);
 				if (isDead) {
 					experimentProcess_ = null;
 					message.append("id: last_log\n");
@@ -743,13 +744,35 @@ public class ExperimentServer extends NanoHTTPD {
 		LOGGER_.debug("available: {}", available);
 		final byte[] buffer = new byte[available];
 		final int read = in.read(buffer);
-		LOGGER_.debug("log: {}", read);
+		LOGGER_.debug("read: {}", read);
 		if (read >= 0) {
 			// something was actually read
 			final String s = new String(buffer, 0, read);
 			LOGGER_.debug("string: {}", s);
-			experimentLog_.append(s);
+
+			final String[] lines = s.split("\n", -1);
+			int i = 0;
+			updateExperilentLogLastLine(lines[i]);
+			for (i = 1; i < lines.length; i++) {
+				experimentLog_.append(experimentLogLastLine_).append("\n");
+				experimentLogLastLine_.setLength(0);
+				updateExperilentLogLastLine(lines[i]);
+			}
 		}
+	}
+
+	private void updateExperilentLogLastLine(final String line) {
+		final int lastIndex = line.lastIndexOf("\r");
+		if (lastIndex < 0) {
+			experimentLogLastLine_.append(line);
+		} else {
+			experimentLogLastLine_.setLength(0);
+			experimentLogLastLine_.append(line.substring(lastIndex + 1));
+		}
+	}
+
+	private String experimentLogToString() {
+		return experimentLog_.toString() + experimentLogLastLine_.toString();
 	}
 
 	private Response newErrorResponse(final String message) {

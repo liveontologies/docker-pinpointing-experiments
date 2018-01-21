@@ -142,7 +142,7 @@ do
 	NAME=`basename -s ".owl" $ONTOLOGY`
 	echo `date "$TIME_LOG_FORMAT"` "tracing elk inferences for $NAME"
 	PROPS='-Delk.reasoner.tracing.evictor=RecencyEvictor(1000000,0.75)'
-	java $JAVA_MEMORY_OPTIONS $PROPS -Dlog4j.configurationFile=log4j2-paramfiles.xml -Dlog.file.out=$INFS_DIR/elk/$NAME.out.log -Dlog.file.err=$INFS_DIR/elk/$NAME.err.log -cp "$CLASSPATH" org.liveontologies.pinpointing.DirectSatEncodingUsingElkCsvQuery $ONTOLOGIES_DIR/$ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up $INFS_DIR/elk/$NAME --minimal
+	java $JAVA_MEMORY_OPTIONS $PROPS -Dlog4j.configurationFile=log4j2-paramfiles.xml -Dlog.file.out=$INFS_DIR/elk/$NAME.out.log -Dlog.file.err=$INFS_DIR/elk/$NAME.err.log -cp "$CLASSPATH" org.liveontologies.pinpointing.DirectSatEncodingUsingElkCsvQuery $ONTOLOGIES_DIR/$ONTOLOGY $QUERIES_DIR/$NAME.queries.bottom_up $INFS_DIR/elk/$NAME --minimal --progress
 	
 done
 
