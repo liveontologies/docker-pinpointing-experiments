@@ -88,6 +88,7 @@
 								<assembly>
 									<descriptorRef>artifact-with-dependencies</descriptorRef>
 								</assembly>
+								<tags>latest</tags>
 							</build>
 							<run>
 								<namingStrategy>alias</namingStrategy>
