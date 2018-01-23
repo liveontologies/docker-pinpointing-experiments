@@ -164,10 +164,13 @@ do
 		EXPERIMENT_NAME=`basename -s ".sh" $EXPERIMENT`
 		echo `date "$TIME_LOG_FORMAT"` "running experiment $EXPERIMENT_NAME ..."
 		
-		for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR/`
+		for NAME in `ls -1 $INFS_DIR/$INF_TYPE/`
 		do
+			if [ ! -d $INFS_DIR/$INF_TYPE/$NAME ]
+			then
+				continue
+			fi
 			
-			NAME=`basename -s ".owl" $ONTOLOGY`
 			echo `date "$TIME_LOG_FORMAT"` "... on $NAME"
 			DIR_NAME=$DATE.$NAME.$EXPERIMENT_NAME.$MACHINE_NAME.$INF_TYPE
 			rm -rf $LOGS_DIR/$DIR_NAME
@@ -201,10 +204,13 @@ do
 		PLOT_ARGS="$PLOT_ARGS $EXPERIMENT_NAME"
 		
 		PLOT_LEGEND=""
-		for ONTOLOGY in `ls -1 $ONTOLOGIES_DIR`
+		for NAME in `ls -1 $INFS_DIR/$INF_TYPE/`
 		do
+			if [ ! -d $INFS_DIR/$INF_TYPE/$NAME ]
+			then
+				continue
+			fi
 			
-			NAME=`basename -s ".owl" $ONTOLOGY`
 			PLOT_LEGEND="$PLOT_LEGEND $NAME"
 			
 			DIR_NAME=$DATE.$NAME.$EXPERIMENT_NAME.$MACHINE_NAME.$INF_TYPE
