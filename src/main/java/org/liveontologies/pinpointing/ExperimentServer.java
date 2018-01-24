@@ -533,7 +533,9 @@ public class ExperimentServer extends NanoHTTPD {
 		} else {
 			// compose tools fields
 			final StringBuilder tools = new StringBuilder();
-			for (final File expFile : availableExpsDir_.listFiles()) {
+			File[] expFiles = availableExpsDir_.listFiles();
+			Arrays.sort(expFiles);
+			for (final File expFile : expFiles) {
 				tools.append("<br/><input type='checkbox' name='");
 				tools.append(expFile.getName());
 				tools.append("'");
