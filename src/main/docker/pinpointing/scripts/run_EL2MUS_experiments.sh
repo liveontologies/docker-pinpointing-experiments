@@ -16,6 +16,8 @@ TOOLS_DIR=$1
 shift
 OUTPUT_DIR=$1
 shift
+ONLY_ONE_JUST=$1
+shift
 
 rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
@@ -64,11 +66,17 @@ do
 		$SCRIPTS_DIR/create-wcnf encoding $QUERY_DIR $QUERY_DIR/encoding.q $QUERY_DIR $TOOLS_DIR no-opt
 	fi
 	
+	ARGS=""
+	if [[ $ONLY_ONE_JUST == "true" ]]
+	then
+		ARGS="$ARGS -nmus 1"
+	fi
+	
 	LOG_DIR=$OUTPUT_DIR/$QUERY_SHA1
 	mkdir -p $LOG_DIR
 	
 	START_NANO=`date +%s%N`
-	timeout -s9 $(($TIMEOUT + 10)) $EXE -T $TIMEOUT $INPUT_FILE 2>&1 > $LOG_DIR/out.log | tee $LOG_DIR/err.log 1>&2
+	timeout -s9 $(($TIMEOUT + 10)) $EXE -T $TIMEOUT $ARGS $INPUT_FILE 2>&1 > $LOG_DIR/out.log | tee $LOG_DIR/err.log 1>&2
 	END_NANO=`date +%s%N`
 	
 	RUN_TIME_NANOS=$(($END_NANO - $START_NANO))
