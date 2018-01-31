@@ -304,6 +304,8 @@ public class ExperimentServer extends NanoHTTPD {
 	private static final Pattern URI_RESULTS_ = Pattern.compile("^/results/?$");
 	private static final Pattern URI_RESULTS_FILE_ = Pattern
 			.compile("^/results/(?<file>[^/]+)$");
+	private static final Pattern URI_PLOT_FILE_ = Pattern
+			.compile("^/results/plots/(?<file>[^/]+)$");
 	private static final Pattern URI_RESULTS_ARCHIVE_ = Pattern
 			.compile("^/results.zip$");
 
@@ -313,6 +315,8 @@ public class ExperimentServer extends NanoHTTPD {
 		try {
 			final URI requestUri = new URI(session.getUri());
 			final Matcher uriResultsFileMatcher = URI_RESULTS_FILE_
+					.matcher(requestUri.getPath());
+			final Matcher uriPlotFileMatcher = URI_PLOT_FILE_
 					.matcher(requestUri.getPath());
 			if (URI_INDEX_.matcher(requestUri.getPath()).matches()) {
 				return indexView(session);
@@ -328,6 +332,8 @@ public class ExperimentServer extends NanoHTTPD {
 			} else if (uriResultsFileMatcher.matches()) {
 				return resultFileView(session,
 						uriResultsFileMatcher.group("file"));
+			} else if (uriPlotFileMatcher.matches()) {
+				return plotFileView(session, uriPlotFileMatcher.group("file"));
 			} else if (URI_KILL_.matcher(requestUri.getPath()).matches()) {
 				return killView(session);
 			} else if (URI_RESULTS_ARCHIVE_.matcher(requestUri.getPath())
@@ -596,26 +602,15 @@ public class ExperimentServer extends NanoHTTPD {
 		// else
 
 		// Paste the SVG plots into the template.
-		final StringBuilder plotString = new StringBuilder("<p>");
-		for (final File plotFile : plotsDir_.listFiles()) {
+		final StringBuilder plotString = new StringBuilder();
+		for (final String plotFileName : plotsDir_.list()) {
 			plotString.append("<h3>");
-			plotString.append(plotFile.getName());
+			plotString.append(plotFileName);
 			plotString.append("</h3>\n");
-			BufferedReader in = null;
-			try {
-				in = new BufferedReader(new FileReader(plotFile));
-				String line = in.readLine();// skip the first line
-				while ((line = in.readLine()) != null) {
-					plotString.append(line);
-				}
-			} catch (IOException e) {
-				return newErrorResponse("Cannot read the plot!", e);
-			} finally {
-				Utils.closeQuietly(in);
-			}
-			plotString.append("\n");
+			plotString.append("<img src='/results/plots/");
+			plotString.append(plotFileName);
+			plotString.append("' />\n");
 		}
-		plotString.append("</p>");
 
 		final StringBuilder resultList = new StringBuilder("<ul>\n");
 		final String[] fileNames = resultsDir_.list(new FilenameFilter() {
@@ -638,17 +633,22 @@ public class ExperimentServer extends NanoHTTPD {
 				plotString.toString(), resultList.toString()));
 	}
 
-	private synchronized Response resultFileView(final IHTTPSession session,
+	private Response resultFileView(final IHTTPSession session,
 			final String fileName) {
 		LOGGER_.info("result file view: {}", fileName);
+		final File file = new File(resultsDir_, fileName);
+		if (!file.exists() || file.isDirectory()) {
+			return newFixedLengthResponse(Status.NOT_FOUND, NanoHTTPD.MIME_HTML,
+					String.format(TEMPLATE_NOT_FOUND_, file.getPath()));
+		}
+		// else
 
 		// Paste the file into the template.
 		// TODO: do this with streams!
 		final StringBuilder fileString = new StringBuilder();
 		BufferedReader in = null;
 		try {
-			in = new BufferedReader(
-					new FileReader(new File(resultsDir_, fileName)));
+			in = new BufferedReader(new FileReader(file));
 			String line;
 			while ((line = in.readLine()) != null) {
 				fileString.append(line).append("\n");
@@ -663,7 +663,26 @@ public class ExperimentServer extends NanoHTTPD {
 				fileName, fileString.toString()));
 	}
 
-	private Response killView(final IHTTPSession session) {
+	private Response plotFileView(final IHTTPSession session,
+			final String fileName) {
+		LOGGER_.info("plot file view {}", fileName);
+		final File file = new File(plotsDir_, fileName);
+		if (!file.exists() || file.isDirectory()) {
+			return newFixedLengthResponse(Status.NOT_FOUND, NanoHTTPD.MIME_HTML,
+					String.format(TEMPLATE_NOT_FOUND_, file.getPath()));
+		}
+		// else
+		try {
+			final InputStream data = new FileInputStream(file);
+			final Response response = newChunkedResponse(Status.OK,
+					"image/svg+xml", data);
+			return response;
+		} catch (final FileNotFoundException e) {
+			return newErrorResponse("Cannot find the plot file!", e);
+		}
+	}
+
+	private synchronized Response killView(final IHTTPSession session) {
 		LOGGER_.info("kill view");
 		if (experimentProcess_ != null && experimentProcess_.isAlive()) {
 			experimentProcess_.destroyForcibly();
