@@ -22,7 +22,7 @@ shift
 rm -rf $OUTPUT_DIR
 mkdir -p $OUTPUT_DIR
 
-echo "query,didTimeOut,time,realTime,cpuTime,nJust" > $OUTPUT_DIR/record.csv
+echo "query,didTimeOut,time,realTime,cpuTime,nJust,meanJustSize" > $OUTPUT_DIR/record.csv
 
 START_TIME_NANOS=`date +%s%N`
 TOTAL_TIME_NANOS=0
@@ -96,11 +96,13 @@ do
         	CT=`grep "c CPU Time" $LOG_DIR/out.log | sed "s/[^0-9]*\([0-9]\+\.\?[0-9]*\)[^0-9]*/\1/g"`
         	echo -n `echo "scale=6; $CT * 1000 - $PT * 1000" | bc`, >> $OUTPUT_DIR/record.csv
         	JS=`grep "Number of MUSes" $LOG_DIR/out.log | sed "s/[^0-9]*\([0-9]\+\.\?[0-9]*\)[^0-9]*/\1/g"`
-        	echo $JS >> $OUTPUT_DIR/record.csv
+        	echo -n $JS, >> $OUTPUT_DIR/record.csv
 	else
 		echo -n $RUN_TIME_MILLIS, >> $OUTPUT_DIR/record.csv
-		echo 0 >> $OUTPUT_DIR/record.csv
+		echo -n 0, >> $OUTPUT_DIR/record.csv
 	fi
+	MEAN_SIZE=`grep "^c.* MUS: " $LOG_DIR/out.log | sed "s/^c.* MUS: \(.*\)$/\1/g" | awk '{ sum += NF } END { if (NR > 0) print sum / NR }'`
+	echo $MEAN_SIZE >> $OUTPUT_DIR/record.csv
 	
 	TOTAL_TIME_NANOS=$(( $TOTAL_TIME_NANOS + $RUN_TIME_NANOS ))
 	if [ $(( $GLOBAL_TIMEOUT * 1000000000 )) -lt $TOTAL_TIME_NANOS ]
