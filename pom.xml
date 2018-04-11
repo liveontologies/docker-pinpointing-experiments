@@ -93,7 +93,7 @@
 							<run>
 								<namingStrategy>alias</namingStrategy>
 								<ports>
-									<port>8888:80</port>
+									<port>3030:3030</port>
 								</ports>
 							</run>
 						</image>
