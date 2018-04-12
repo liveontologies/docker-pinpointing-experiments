@@ -67,6 +67,12 @@ It runs a simple HTTP server using which the experiments can be started.
 
 1. Point your browser to the address of the host machine with the configured port,
     e.g., http://localhost:3030/.
+    
+    If the server is not available, or there are other problems, one can inspect the
+    container output log using
+    ```
+    docker logs pinpointing-container
+    ```
 
 1. Use the web interface to configure and run the experiments.
 
